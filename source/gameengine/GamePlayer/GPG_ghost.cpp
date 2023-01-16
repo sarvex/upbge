@@ -38,6 +38,11 @@
 #  endif /* __alpha__ */
 #endif   /* __linux__ */
 
+#if defined(WITH_TBB_MALLOC) && defined(_MSC_VER) && defined(NDEBUG)
+#  pragma comment(lib, "tbbmalloc_proxy.lib")
+#  pragma comment(linker, "/include:__TBB_malloc_proxy")
+#endif
+
 #include "BKE_addon.h"
 #include "BKE_appdir.h"
 #include "BKE_blender.h"
@@ -129,6 +134,42 @@
 extern "C" {
  void UV_clipboard_free(void);
 }
+
+/* -------------------------------------------------------------------- */
+/** \name GMP Allocator Workaround
+ * \{ */
+
+#if (defined(WITH_TBB_MALLOC) && defined(_MSC_VER) && defined(NDEBUG) && defined(WITH_GMP)) || \
+    defined(DOXYGEN)
+#  include "gmp.h"
+#  include "tbb/scalable_allocator.h"
+
+void *gmp_alloc(size_t size)
+{
+  return scalable_malloc(size);
+}
+void *gmp_realloc(void *ptr, size_t old_size, size_t new_size)
+{
+  return scalable_realloc(ptr, new_size);
+}
+
+void gmp_free(void *ptr, size_t size)
+{
+  scalable_free(ptr);
+}
+/**
+ * Use TBB's scalable_allocator on Windows.
+ * `TBBmalloc` correctly captures all allocations already,
+ * however, GMP is built with MINGW since it doesn't build with MSVC,
+ * which TBB has issues hooking into automatically.
+ */
+void gmp_blender_init_allocator()
+{
+  mp_set_memory_functions(gmp_alloc, gmp_realloc, gmp_free);
+}
+#endif
+
+/** \} */
 
 #ifdef __APPLE__
 extern "C" int GHOST_HACK_getFirstFile(char buf[]);

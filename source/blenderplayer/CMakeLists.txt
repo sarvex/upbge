@@ -34,6 +34,14 @@ list(APPEND LIB
   bf_blenloader
 )
 
+if(WITH_TBB)	
+  list(APPEND INC ${TBB_INCLUDE_DIRS})	
+  if(WIN32)	
+    # For `pragma` that links `tbbmalloc_proxy.lib`.	
+    link_directories(${LIBDIR}/tbb/lib)	
+  endif()	
+endif()
+
 # Compatibility with Windows 7
 if(WIN32 AND WITH_WINDOWS_7)
   list(INSERT LIB 0 ${BCOMPAT7_LIBRARIES})

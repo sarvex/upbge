@@ -97,6 +97,23 @@ if(WITH_USD)
   #add_definitions(-DWITH_USD)
 endif()
 
+if(WITH_TBB)
+  add_definitions(-DWITH_TBB)
+
+  list(APPEND INC_SYS
+    ${TBB_INCLUDE_DIRS}
+  )
+
+  list(APPEND LIB
+    ${TBB_LIBRARIES}
+  )
+endif()
+
+if(WITH_GMP)
+  list(APPEND INC ${GMP_INCLUDE_DIRS})
+  add_definitions(-DWITH_GMP)
+endif()
+
 if(WITH_PYTHON)
   list(APPEND INC_SYS
     ${PYTHON_INCLUDE_DIRS}
