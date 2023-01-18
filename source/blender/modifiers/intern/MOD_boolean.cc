@@ -426,7 +426,9 @@ static Mesh *exact_boolean_mesh(BooleanModifierData *bmd,
 
   meshes.append(mesh);
   obmats.append((float4x4 *)&ctx->object->object_to_world);
-  material_remaps.append({});
+  /* UPBGE: Attempt to fix crash at conversion when an object with a material
+   * intersects with an object with no material */
+  material_remaps.append(/*{}*/ {0});
 
   const BooleanModifierMaterialMode material_mode = BooleanModifierMaterialMode(
       bmd->material_mode);
@@ -664,35 +666,35 @@ static void panelRegister(ARegionType *region_type)
 }
 
 ModifierTypeInfo modifierType_Boolean = {
-    /* name */ N_("Boolean"),
-    /* structName */ "BooleanModifierData",
-    /* structSize */ sizeof(BooleanModifierData),
-    /* srna */ &RNA_BooleanModifier,
-    /* type */ eModifierTypeType_Nonconstructive,
-    /* flags */
+    /*name*/ N_("Boolean"),
+    /*structName*/ "BooleanModifierData",
+    /*structSize*/ sizeof(BooleanModifierData),
+    /*srna*/ &RNA_BooleanModifier,
+    /*type*/ eModifierTypeType_Nonconstructive,
+    /*flags*/
     (ModifierTypeFlag)(eModifierTypeFlag_AcceptsMesh | eModifierTypeFlag_SupportsEditmode),
-    /* icon */ ICON_MOD_BOOLEAN,
+    /*icon*/ ICON_MOD_BOOLEAN,
 
-    /* copyData */ BKE_modifier_copydata_generic,
+    /*copyData*/ BKE_modifier_copydata_generic,
 
-    /* deformVerts */ nullptr,
-    /* deformMatrices */ nullptr,
-    /* deformVertsEM */ nullptr,
-    /* deformMatricesEM */ nullptr,
-    /* modifyMesh */ modifyMesh,
-    /* modifyGeometrySet */ nullptr,
+    /*deformVerts*/ nullptr,
+    /*deformMatrices*/ nullptr,
+    /*deformVertsEM*/ nullptr,
+    /*deformMatricesEM*/ nullptr,
+    /*modifyMesh*/ modifyMesh,
+    /*modifyGeometrySet*/ nullptr,
 
-    /* initData */ initData,
-    /* requiredDataMask */ requiredDataMask,
-    /* freeData */ nullptr,
-    /* isDisabled */ isDisabled,
-    /* updateDepsgraph */ updateDepsgraph,
-    /* dependsOnTime */ nullptr,
-    /* dependsOnNormals */ nullptr,
-    /* foreachIDLink */ foreachIDLink,
-    /* foreachTexLink */ nullptr,
-    /* freeRuntimeData */ nullptr,
-    /* panelRegister */ panelRegister,
-    /* blendWrite */ nullptr,
-    /* blendRead */ nullptr,
+    /*initData*/ initData,
+    /*requiredDataMask*/ requiredDataMask,
+    /*freeData*/ nullptr,
+    /*isDisabled*/ isDisabled,
+    /*updateDepsgraph*/ updateDepsgraph,
+    /*dependsOnTime*/ nullptr,
+    /*dependsOnNormals*/ nullptr,
+    /*foreachIDLink*/ foreachIDLink,
+    /*foreachTexLink*/ nullptr,
+    /*freeRuntimeData*/ nullptr,
+    /*panelRegister*/ panelRegister,
+    /*blendWrite*/ nullptr,
+    /*blendRead*/ nullptr,
 };
