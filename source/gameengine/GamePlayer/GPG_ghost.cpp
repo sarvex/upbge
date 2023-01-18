@@ -865,6 +865,10 @@ int main(int argc,
 
   bContext *C = CTX_create();
 
+#if defined(WITH_TBB_MALLOC) && defined(_MSC_VER) && defined(NDEBUG) && defined(WITH_GMP)
+  gmp_blender_init_allocator();
+#endif
+
   /* Initialize path to executable. */
   BKE_appdir_program_path_init(argv[0]);
 
