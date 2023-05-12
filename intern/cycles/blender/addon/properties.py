@@ -1565,14 +1565,18 @@ class CyclesPreferences(bpy.types.AddonPreferences):
     )
 
     def find_existing_device_entry(self, device):
-        for device_entry in self.devices:
-            if device_entry.id == device[2] and device_entry.type == device[1]:
-                return device_entry
-        return None
+        return next(
+            (
+                device_entry
+                for device_entry in self.devices
+                if device_entry.id == device[2] and device_entry.type == device[1]
+            ),
+            None,
+        )
 
     def update_device_entries(self, device_list):
         for device in device_list:
-            if not device[1] in {'CUDA', 'OPTIX', 'CPU', 'HIP', 'METAL', 'ONEAPI'}:
+            if device[1] not in {'CUDA', 'OPTIX', 'CPU', 'HIP', 'METAL', 'ONEAPI'}:
                 continue
             # Try to find existing Device entry
             entry = self.find_existing_device_entry(device)
@@ -1625,9 +1629,7 @@ class CyclesPreferences(bpy.types.AddonPreferences):
         return None
 
     def get_compute_device_type(self):
-        if self.compute_device_type == '':
-            return 'NONE'
-        return self.compute_device_type
+        return 'NONE' if self.compute_device_type == '' else self.compute_device_type
 
     def get_num_gpu_devices(self):
         import _cycles
@@ -1661,12 +1663,7 @@ class CyclesPreferences(bpy.types.AddonPreferences):
     def _draw_devices(self, layout, device_type, devices):
         box = layout.box()
 
-        found_device = False
-        for device in devices:
-            if device.type == device_type:
-                found_device = True
-                break
-
+        found_device = any(device.type == device_type for device in devices)
         if not found_device:
             col = box.column(align=True)
             col.label(text="No compatible GPUs found for Cycles", icon='INFO')
@@ -1690,13 +1687,7 @@ class CyclesPreferences(bpy.types.AddonPreferences):
                     col.label(text=iface_("and AMD Radeon Pro %s driver or newer") % driver_version,
                               icon='BLANK1', translate=False)
                 elif sys.platform.startswith("linux"):
-                    if True:
-                        col.label(text="HIP temporarily disabled due to compiler bugs", icon='BLANK1')
-                    else:
-                        driver_version = "22.10"
-                        col.label(text="Requires AMD GPU with Vega or RDNA architecture", icon='BLANK1')
-                        col.label(text=iface_("and AMD driver version %s or newer") % driver_version, icon='BLANK1',
-                                  translate=False)
+                    col.label(text="HIP temporarily disabled due to compiler bugs", icon='BLANK1')
             elif device_type == 'ONEAPI':
                 import sys
                 if sys.platform.startswith("win"):
@@ -1742,10 +1733,11 @@ class CyclesPreferences(bpy.types.AddonPreferences):
         self._draw_devices(row, compute_device_type, devices)
 
         import _cycles
-        has_peer_memory = 0
-        for device in _cycles.available_devices(compute_device_type):
-            if device[3] and self.find_existing_device_entry(device).use:
-                has_peer_memory += 1
+        has_peer_memory = sum(
+            1
+            for device in _cycles.available_devices(compute_device_type)
+            if device[3] and self.find_existing_device_entry(device).use
+        )
         if has_peer_memory > 1:
             row = layout.row()
             row.use_property_split = True
@@ -1754,20 +1746,21 @@ class CyclesPreferences(bpy.types.AddonPreferences):
         if compute_device_type == 'METAL':
             import platform
             import re
-            is_navi_2 = False
-            for device in devices:
-                if re.search(r"((RX)|(Pro)|(PRO))\s+W?6\d00X", device.name):
-                    is_navi_2 = True
-                    break
-
+            is_navi_2 = any(
+                re.search(r"((RX)|(Pro)|(PRO))\s+W?6\d00X", device.name)
+                for device in devices
+            )
             # MetalRT only works on Apple Silicon and Navi2.
             is_arm64 = platform.machine() == 'arm64'
-            if is_arm64 or is_navi_2:
+            if is_arm64:
                 col = layout.column()
                 col.use_property_split = True
-                # Kernel specialization is only supported on Apple Silicon
-                if is_arm64:
-                    col.prop(self, "kernel_optimization_level")
+                col.prop(self, "kernel_optimization_level")
+                col.prop(self, "use_metalrt")
+
+            elif is_navi_2:
+                col = layout.column()
+                col.use_property_split = True
                 col.prop(self, "use_metalrt")
 
         if compute_device_type == 'ONEAPI' and _cycles.with_embree_gpu:

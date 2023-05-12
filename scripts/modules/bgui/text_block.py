@@ -75,21 +75,39 @@ class TextBlock(Widget):
     char_height /= self.size[1]
 
     for words in lines:
-      line = Label(self, "lines_" + str(cur_line), "", self._font, self._pt_size, self._color, pos=[0, 1 - (cur_line + 1) * char_height], sub_theme=self.theme['LabelSubTheme'])
+      line = Label(
+          self,
+          f"lines_{str(cur_line)}",
+          "",
+          self._font,
+          self._pt_size,
+          self._color,
+          pos=[0, 1 - (cur_line + 1) * char_height],
+          sub_theme=self.theme['LabelSubTheme'],
+      )
 
       while words:
         # Try to add a word
         if line.text:
-          line.text += " " + words[0]
+          line.text += f" {words[0]}"
         else:
           line.text = words[0]
 
         # The line is too big, remove the word and create a new line
         if line.size[0] > self.size[0]:
-          line.text = line.text[0:-(len(words[0]) + 1)]
+          line.text = line.text[:-(len(words[0]) + 1)]
           self._lines.append(line)
           cur_line += 1
-          line = Label(self, "lines_" + str(cur_line), "", self._font, self._pt_size, self._color, pos=[0, 1 - (cur_line + 1) * char_height], sub_theme=self.theme['LabelSubTheme'])
+          line = Label(
+              self,
+              f"lines_{cur_line}",
+              "",
+              self._font,
+              self._pt_size,
+              self._color,
+              pos=[0, 1 - (cur_line + 1) * char_height],
+              sub_theme=self.theme['LabelSubTheme'],
+          )
         else:
           # The word fit, so remove it from the words list
           words.remove(words[0])

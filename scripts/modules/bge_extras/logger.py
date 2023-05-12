@@ -72,9 +72,7 @@ def setup(log_level: int) -> None:
         }
 
     if log_conf["loggers"]:
-        root = log_conf["loggers"]["root"]
-
-        if root:
+        if root := log_conf["loggers"]["root"]:
             root["level"] = logging.getLevelName(log_level)
 
     logging.config.dictConfig(log_conf)

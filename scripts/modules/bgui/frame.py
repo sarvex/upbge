@@ -46,13 +46,9 @@ class Frame(Widget):
 
     #: The color of the border around the frame.
     self.border_color = self.theme['BorderColor']
-    
-    #: The size of the border around the frame.
-    if border is not None:
-      self.border = border
-    else:
-      self.border = self.theme['BorderSize']
 
+    #: The size of the border around the frame.
+    self.border = border if border is not None else self.theme['BorderSize']
     self.line_shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
     self.shader = gpu.shader.from_builtin('2D_SMOOTH_COLOR')
 

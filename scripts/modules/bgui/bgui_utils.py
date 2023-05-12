@@ -61,10 +61,7 @@ class System(BguiSystem):
     if self.layout:
       self._remove_widget(self.layout)
 
-    if layout:
-      self.layout = layout(self, data)
-    else:
-      self.layout = None
+    self.layout = layout(self, data) if layout else None
 
   def add_overlay(self, overlay, data=None):
     """Add an overlay layout, which sits on top of the currently loaded layout
@@ -75,7 +72,7 @@ class System(BguiSystem):
     name = overlay.__class__.__name__
 
     if name in self.overlays:
-      print("Overlay: %s, is already added" % name)
+      print(f"Overlay: {name}, is already added")
       return
 
     self.overlays[overlay.__class__.__name__] = overlay(self, data)
@@ -92,7 +89,7 @@ class System(BguiSystem):
       self._remove_widget(self.overlays[name])
       del self.overlays[name]
     else:
-      print("WARNING: Overlay: %s was not found, nothing was removed" % name)
+      print(f"WARNING: Overlay: {name} was not found, nothing was removed")
 
   def toggle_overlay(self, overlay, data=None):
     """Toggle an overlay (if the overlay is active, remove it, otherwise add it)

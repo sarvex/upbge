@@ -56,12 +56,11 @@ class Theme(configparser.ConfigParser):
     configparser.ConfigParser.__init__(self)
 
     if file:
-      Theme.path = file + '/'
+      Theme.path = f'{file}/'
+      self.read(f'{Theme.path}theme.cfg')
+
     else:
       Theme.path = './'
-
-    if file:
-      self.read(Theme.path + 'theme.cfg')
 
     self._legacy_warnings = []
     self._support_warnings = []
@@ -76,13 +75,9 @@ class Theme(configparser.ConfigParser):
     if not self.has_section(widget.theme_section):
       return False
 
-    # Then we see if we have the required options
-    for opt in widget.theme_options:
-      if not self.has_option(widget.theme_section, opt):
-        return False
-
-    # All looks good, return True
-    return True
+    return all(
+        self.has_option(widget.theme_section, opt)
+        for opt in widget.theme_options)
 
   def warn_legacy(self, section):
     if section not in self._legacy_warnings:

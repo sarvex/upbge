@@ -24,8 +24,7 @@ from typing import (
 
 def man_format(data: str) -> str:
     data = data.replace("-", "\\-")
-    data = data.replace("\t", "  ")
-    return data
+    return data.replace("\t", "  ")
 
 
 def blender_extract_info(blender_bin: str) -> Dict[str, str]:
@@ -132,11 +131,11 @@ https://www.blender.org""")
                 if lines[0].strip() and len(lines[0].lstrip()) == len(lines[0]):  # No white space.
                     break
 
-                if not l:  # Second blank line.
-                    fh.write('.IP\n')
-                else:
+                if l:
                     fh.write('.br\n')
 
+                else:  # Second blank line.
+                    fh.write('.IP\n')
                 l = lines.pop(0)
                 if l:
                     assert l.startswith('\t')
@@ -144,11 +143,10 @@ https://www.blender.org""")
 
                 fh.write('%s\n' % man_format(l))
 
+        elif not l.strip():
+            fh.write('.br\n')
         else:
-            if not l.strip():
-                fh.write('.br\n')
-            else:
-                fh.write('%s\n' % man_format(l))
+            fh.write('%s\n' % man_format(l))
 
     # Footer Content.
 

@@ -174,8 +174,9 @@ class TextInput(Widget):
   #utility functions
   def _update_char_widths(self):
     self.char_widths = []
-    for char in self.text:
-      self.char_widths.append(blf.dimensions(self.label.fontid, char * 20)[0] / 20)
+    self.char_widths.extend(
+        blf.dimensions(self.label.fontid, char * 20)[0] / 20
+        for char in self.text)
 
   def select_all(self):
     """Change the selection to include all of the text"""
@@ -284,7 +285,8 @@ class TextInput(Widget):
         self.find_mouse_slice(pos)
 
     elif event == BGUI_MOUSE_ACTIVE:
-      if not self.just_activated or self.just_activated and not self.input_options & BGUI_INPUT_SELECT_ALL:
+      if (not self.just_activated
+          or not self.input_options & BGUI_INPUT_SELECT_ALL):
         self.find_mouse_slice(pos)
 
     if event == BGUI_MOUSE_RELEASE:

@@ -62,9 +62,24 @@ def git_local_branch_exists(git_command: str, branch: str) -> bool:
 
 def git_branch_exists(git_command: str, branch: str) -> bool:
     return (
-        git_local_branch_exists(git_command, branch) or
-        call([git_command, "rev-parse", "--verify", "remotes/upstream/" + branch], exit_on_error=False, silent=True) == 0 or
-        call([git_command, "rev-parse", "--verify", "remotes/origin/" + branch], exit_on_error=False, silent=True) == 0
+        git_local_branch_exists(git_command, branch)
+        or call(
+            [
+                git_command,
+                "rev-parse",
+                "--verify",
+                f"remotes/upstream/{branch}",
+            ],
+            exit_on_error=False,
+            silent=True,
+        )
+        == 0
+        or call(
+            [git_command, "rev-parse", "--verify", f"remotes/origin/{branch}"],
+            exit_on_error=False,
+            silent=True,
+        )
+        == 0
     )
 
 
@@ -96,7 +111,7 @@ def git_get_resolved_submodule_url(git_command: str, blender_url: str, submodule
     # Note that unless the LHS URL ends up with a slash urljoin treats the last component as a
     # file.
     assert gitmodule_url.startswith('..')
-    return urljoin(blender_url + "/", gitmodule_url)
+    return urljoin(f"{blender_url}/", gitmodule_url)
 
 
 def git_is_remote_repository(git_command: str, repo: str) -> bool:
@@ -144,30 +159,26 @@ def git_branch_release_version(branch: str, tag: Optional[str]) -> Optional[str]
     re_match = re.search("^blender-v(.*)-release$", branch)
     release_version = None
     if re_match:
-        release_version = re_match.group(1)
+        release_version = re_match[1]
     elif tag:
-        re_match = re.search(r"^v([0-9]*\.[0-9]*).*", tag)
-        if re_match:
-            release_version = re_match.group(1)
+        if re_match := re.search(r"^v([0-9]*\.[0-9]*).*", tag):
+            release_version = re_match[1]
     return release_version
 
 
 def svn_libraries_base_url(release_version: Optional[str], branch: Optional[str] = None) -> str:
     if release_version:
-        svn_branch = "tags/blender-" + release_version + "-release"
+        svn_branch = f"tags/blender-{release_version}-release"
     elif branch:
-        svn_branch = "branches/" + branch
+        svn_branch = f"branches/{branch}"
     else:
         svn_branch = "trunk"
-    return "https://svn.blender.org/svnroot/bf-blender/" + svn_branch + "/lib/"
+    return f"https://svn.blender.org/svnroot/bf-blender/{svn_branch}/lib/"
 
 
 def command_missing(command: str) -> bool:
     # Support running with Python 2 for macOS
-    if sys.version_info >= (3, 0):
-        return shutil.which(command) is None
-    else:
-        return False
+    return shutil.which(command) is None if sys.version_info >= (3, 0) else False
 
 
 class BlenderVersion:
@@ -193,9 +204,7 @@ class BlenderVersion:
         version_major = self.version // 100
         version_minor = self.version % 100
         as_string = f"{version_major}.{version_minor}.{self.patch}"
-        if self.is_release():
-            return as_string
-        return f"{as_string}-{self.cycle}"
+        return as_string if self.is_release() else f"{as_string}-{self.cycle}"
 
 
 def parse_blender_version() -> BlenderVersion:
@@ -207,10 +216,8 @@ def parse_blender_version() -> BlenderVersion:
 
     with version_path.open(encoding="utf-8") as version_file:
         for line in version_file:
-            match = line_re.match(line.strip())
-            if not match:
-                continue
-            version_info[match.group(1)] = match.group(2)
+            if match := line_re.match(line.strip()):
+                version_info[match[1]] = match[2]
 
     return BlenderVersion(
         int(version_info["BLENDER_VERSION"]),

@@ -74,9 +74,9 @@ class WeakMethod:
       self.c = None
 
   def __call__(self, *args):
-    if self.c == None:
+    if self.c is None:
       self.f(*args)
-    elif self.c() == None:
+    elif self.c() is None:
       return None
     else:
       self.f(*((self.c(),) + args))
@@ -175,7 +175,7 @@ class Widget:
     self._system = parent._system
 
     if sub_theme:
-      self.theme_section += ':' + sub_theme
+      self.theme_section += f':{sub_theme}'
 
     self._generate_theme()
 
@@ -245,10 +245,7 @@ class Widget:
         self.theme = {}
 
         for k, v in self.theme_options.items():
-          if k in theme:
-            self.theme[k] = theme[k]
-          else:
-            self.theme[k] = v
+          self.theme[k] = theme[k] if k in theme else v
       elif not hasattr(self, "theme"):
         self.theme = self.theme_options
 
@@ -503,7 +500,7 @@ class Widget:
       raise TypeError("Expected a Widget object")
 
     if widget in self.children.values():
-      raise ValueError("%s is already attached to this widget" % (widget.name))
+      raise ValueError(f"{widget.name} is already attached to this widget")
 
     self.children[widget.name] = widget
 

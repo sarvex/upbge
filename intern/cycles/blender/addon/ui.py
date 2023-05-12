@@ -73,13 +73,13 @@ class CyclesDebugButtonsPanel(CyclesButtonsPanel):
 # Adapt properties editor panel to display in node editor. We have to
 # copy the class rather than inherit due to the way bpy registration works.
 def node_panel(cls):
-    node_cls = type('NODE_' + cls.__name__, cls.__bases__, dict(cls.__dict__))
+    node_cls = type(f'NODE_{cls.__name__}', cls.__bases__, dict(cls.__dict__))
 
     node_cls.bl_space_type = 'NODE_EDITOR'
     node_cls.bl_region_type = 'UI'
     node_cls.bl_category = "Options"
     if hasattr(node_cls, 'bl_parent_id'):
-        node_cls.bl_parent_id = 'NODE_' + node_cls.bl_parent_id
+        node_cls.bl_parent_id = f'NODE_{node_cls.bl_parent_id}'
 
     return node_cls
 
@@ -587,8 +587,6 @@ class CYCLES_RENDER_PT_light_paths_fast_gi(CyclesButtonsPanel, Panel):
     def draw(self, context):
         scene = context.scene
         cscene = scene.cycles
-        world = scene.world
-
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False
@@ -598,7 +596,7 @@ class CYCLES_RENDER_PT_light_paths_fast_gi(CyclesButtonsPanel, Panel):
         col = layout.column(align=True)
         col.prop(cscene, "fast_gi_method", text="Method")
 
-        if world:
+        if world := scene.world:
             light = world.light_settings
             col = layout.column(align=True)
             col.prop(light, "ao_factor", text="AO Factor")
@@ -1108,10 +1106,7 @@ class CYCLES_PT_context_material(CyclesButtonsPanel, Panel):
 
         if ob:
             is_sortable = len(ob.material_slots) > 1
-            rows = 3
-            if (is_sortable):
-                rows = 4
-
+            rows = 4 if is_sortable else 3
             row = layout.row()
 
             row.template_list("MATERIAL_UL_matslots", "", ob, "material_slots", ob, "active_material_index", rows=rows)
@@ -1157,12 +1152,21 @@ class CYCLES_OBJECT_PT_motion_blur(CyclesButtonsPanel, Panel):
     def poll(cls, context):
         ob = context.object
         if CyclesButtonsPanel.poll(context) and ob:
-            if ob.type in {'MESH', 'CURVE', 'CURVE', 'SURFACE', 'FONT',
-                           'META', 'CAMERA', 'CURVES', 'POINTCLOUD', 'VOLUME'}:
+            if ob.type in {
+                'MESH',
+                'CURVE',
+                'SURFACE',
+                'FONT',
+                'META',
+                'CAMERA',
+                'CURVES',
+                'POINTCLOUD',
+                'VOLUME',
+            }:
                 return True
             if ob.instance_type == 'COLLECTION' and ob.instance_collection:
                 return True
-            # TODO(sergey): More duplicator types here?
+                # TODO(sergey): More duplicator types here?
         return False
 
     def draw_header(self, context):
@@ -1315,7 +1319,9 @@ class CYCLES_OBJECT_PT_lightgroup(CyclesButtonsPanel, Panel):
         sub.prop_search(ob, "lightgroup", view_layer, "lightgroups", text="Light Group", results_are_suggestions=True)
 
         sub = row.column(align=True)
-        sub.enabled = bool(ob.lightgroup) and not any(lg.name == ob.lightgroup for lg in view_layer.lightgroups)
+        sub.enabled = bool(ob.lightgroup) and all(
+            lg.name != ob.lightgroup for lg in view_layer.lightgroups
+        )
         sub.operator("scene.view_layer_add_lightgroup", icon='ADD', text="").name = ob.lightgroup
 
 
@@ -1412,10 +1418,8 @@ def panel_node_draw(layout, id_data, output_type, input_name):
 
     ntree = id_data.node_tree
 
-    node = ntree.get_output_node('CYCLES')
-    if node:
-        input = find_node_input(node, input_name)
-        if input:
+    if node := ntree.get_output_node('CYCLES'):
+        if input := find_node_input(node, input_name):
             layout.template_node_view(ntree, node, input)
         else:
             layout.label(text="Incompatible output node")
@@ -1603,11 +1607,10 @@ class CYCLES_WORLD_PT_mist(CyclesButtonsPanel, Panel):
 
     @classmethod
     def poll(cls, context):
-        if CyclesButtonsPanel.poll(context):
-            if context.world:
-                for view_layer in context.scene.view_layers:
-                    if view_layer.use_pass_mist:
-                        return True
+        if CyclesButtonsPanel.poll(context) and context.world:
+            for view_layer in context.scene.view_layers:
+                if view_layer.use_pass_mist:
+                    return True
 
         return False
 
@@ -1755,7 +1758,9 @@ class CYCLES_WORLD_PT_settings_light_group(CyclesButtonsPanel, Panel):
         )
 
         sub = row.column(align=True)
-        sub.enabled = bool(world.lightgroup) and not any(lg.name == world.lightgroup for lg in view_layer.lightgroups)
+        sub.enabled = bool(world.lightgroup) and all(
+            lg.name != world.lightgroup for lg in view_layer.lightgroups
+        )
         sub.operator("scene.view_layer_add_lightgroup", icon='ADD', text="").name = world.lightgroup
 
 
@@ -1916,7 +1921,6 @@ class CYCLES_RENDER_PT_bake(CyclesButtonsPanel, Panel):
 
         scene = context.scene
         cscene = scene.cycles
-        cbk = scene.render.bake
         rd = scene.render
 
         if rd.use_bake_multires:
@@ -1932,6 +1936,7 @@ class CYCLES_RENDER_PT_bake(CyclesButtonsPanel, Panel):
         if not rd.use_bake_multires and cscene.bake_type not in {
                 "AO", "POSITION", "NORMAL", "UV", "ROUGHNESS", "ENVIRONMENT"}:
             row = layout.row()
+            cbk = scene.render.bake
             row.prop(cbk, "view_from")
             row.active = scene.camera is not None
 
@@ -2048,7 +2053,6 @@ class CYCLES_RENDER_PT_bake_output(CyclesButtonsPanel, Panel):
 
         scene = context.scene
         cscene = scene.cycles
-        cbk = scene.render.bake
         rd = scene.render
 
         if rd.use_bake_multires:
@@ -2056,6 +2060,7 @@ class CYCLES_RENDER_PT_bake_output(CyclesButtonsPanel, Panel):
             if rd.bake_type == 'DISPLACEMENT':
                 layout.prop(rd, "use_bake_lores_mesh")
         else:
+            cbk = scene.render.bake
             layout.prop(cbk, "target")
             if cbk.target == 'IMAGE_TEXTURES':
                 layout.prop(cbk, "use_clear", text="Clear Image")
@@ -2086,17 +2091,14 @@ class CYCLES_RENDER_PT_bake_output_margin(CyclesButtonsPanel, Panel):
         if (cscene.bake_type == 'NORMAL' and cbk.normal_space == 'TANGENT') or cscene.bake_type == 'UV':
             if rd.use_bake_multires:
                 layout.prop(rd, "bake_margin", text="Size")
-            else:
-                if cbk.target == 'IMAGE_TEXTURES':
-                    layout.prop(cbk, "margin", text="Size")
-        else:
-            if rd.use_bake_multires:
-                layout.prop(rd, "bake_margin_type", text="Type")
-                layout.prop(rd, "bake_margin", text="Size")
-            else:
-                if cbk.target == 'IMAGE_TEXTURES':
-                    layout.prop(cbk, "margin_type", text="Type")
-                    layout.prop(cbk, "margin", text="Size")
+            elif cbk.target == 'IMAGE_TEXTURES':
+                layout.prop(cbk, "margin", text="Size")
+        elif rd.use_bake_multires:
+            layout.prop(rd, "bake_margin_type", text="Type")
+            layout.prop(rd, "bake_margin", text="Size")
+        elif cbk.target == 'IMAGE_TEXTURES':
+            layout.prop(cbk, "margin_type", text="Type")
+            layout.prop(cbk, "margin", text="Size")
 
 
 class CYCLES_RENDER_PT_debug(CyclesDebugButtonsPanel, Panel):
@@ -2325,13 +2327,13 @@ class CYCLES_VIEW3D_PT_simplify_greasepencil(CyclesButtonsPanel, Panel, GreasePe
 
 
 def draw_device(self, context):
-    scene = context.scene
     layout = self.layout
     layout.use_property_split = True
     layout.use_property_decorate = False
 
     if context.engine == 'CYCLES':
         from . import engine
+        scene = context.scene
         cscene = scene.cycles
 
         col = layout.column()
@@ -2350,14 +2352,14 @@ def draw_device(self, context):
 
 
 def draw_pause(self, context):
-    layout = self.layout
-    scene = context.scene
-
     if context.engine == "CYCLES":
         view = context.space_data
 
         if view.shading.type == 'RENDERED':
+            scene = context.scene
+
             cscene = scene.cycles
+            layout = self.layout
             layout.prop(cscene, "preview_pause", icon='PLAY' if cscene.preview_pause else 'PAUSE', text="")
 
 
@@ -2379,13 +2381,13 @@ def get_panels():
         'RENDER_PT_simplify',
     }
 
-    panels = []
-    for panel in bpy.types.Panel.__subclasses__():
-        if hasattr(panel, 'COMPAT_ENGINES') and 'BLENDER_RENDER' in panel.COMPAT_ENGINES:
-            if panel.__name__ not in exclude_panels:
-                panels.append(panel)
-
-    return panels
+    return [
+        panel
+        for panel in bpy.types.Panel.__subclasses__()
+        if hasattr(panel, 'COMPAT_ENGINES')
+        and 'BLENDER_RENDER' in panel.COMPAT_ENGINES
+        and panel.__name__ not in exclude_panels
+    ]
 
 
 classes = (

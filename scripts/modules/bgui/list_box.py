@@ -129,12 +129,10 @@ class ListBox(Widget):
   def _handle_mouse(self, pos, event):
 
     if event == BGUI_MOUSE_CLICK:
-      for item, gpu_view_position in self._spatial_map.items():
-        if (gpu_view_position[0][0] <= pos[0] <= gpu_view_position[1][0]) and \
-          (gpu_view_position[0][1] <= pos[1] <= gpu_view_position[2][1]):
-            self.selected = item
-            break
-      else:
-        self.selected = None
-
+      self.selected = next(
+          (item for item, gpu_view_position in self._spatial_map.items()
+           if (gpu_view_position[0][0] <= pos[0] <= gpu_view_position[1][0]) and
+           (gpu_view_position[0][1] <= pos[1] <= gpu_view_position[2][1])),
+          None,
+      )
     Widget._handle_mouse(self, pos, event)

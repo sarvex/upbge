@@ -42,16 +42,8 @@ class Label(Widget):
       font = self.theme['Font']
       self.fontid = blf.load(font) if font else 0
 
-    if pt_size:
-      self.pt_size = pt_size
-    else:
-      self.pt_size = self.theme['Size']
-
-    if color:
-      self.color = color
-    else:
-      self.color = self.theme['Color']
-
+    self.pt_size = pt_size if pt_size else self.theme['Size']
+    self.color = color if color else self.theme['Color']
     if outline_color:
       self.outline_color = outline_color
     else:
@@ -102,7 +94,7 @@ class Label(Widget):
       self._pt_size = value
 
   def _draw_text(self, x, y):
-    for i, txt in enumerate([i for i in self._text.split('\n')]):
+    for i, txt in enumerate(list(self._text.split('\n'))):
       blf.position(self.fontid, x, y - (self.size[1] * i), 0)
       blf.draw(self.fontid, txt.replace('\t', '    '))
 

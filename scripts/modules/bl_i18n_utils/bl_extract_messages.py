@@ -27,7 +27,7 @@ def init_spell_check(settings, lang="en_US"):
         from bl_i18n_utils import utils_spell_check
         return utils_spell_check.SpellChecker(settings, lang)
     except Exception as e:
-        print("Failed to import utils_spell_check ({})".format(str(e)))
+        print(f"Failed to import utils_spell_check ({str(e)})")
         return None
 
 
@@ -87,32 +87,28 @@ def check(check_ctxt, msgs, key, msgsrc, settings):
     spell_checker = check_ctxt.get("spell_checker")
     spell_errors = check_ctxt.get("spell_errors")
 
-    if multi_rnatip is not None:
-        if key in msgs and key not in multi_rnatip:
-            multi_rnatip.add(key)
-    if multi_lines is not None:
-        if '\n' in key[1]:
-            multi_lines.add(key)
-    if py_in_rna is not None:
-        if key in py_in_rna[1]:
-            py_in_rna[0].add(key)
-    if not_capitalized is not None:
-        if (key[1] not in settings.WARN_MSGID_NOT_CAPITALIZED_ALLOWED and
-           key[1][0].isalpha() and not key[1][0].isupper()):
-            not_capitalized.add(key)
-    if end_point is not None:
-        if (
-                key[1].strip().endswith('.') and
-                (not key[1].strip().endswith('...')) and
-                key[1] not in settings.WARN_MSGID_END_POINT_ALLOWED
-        ):
-            end_point.add(key)
-    if undoc_ops is not None:
-        if key[1] == settings.UNDOC_OPS_STR:
-            undoc_ops.add(key)
+    if multi_rnatip is not None and key in msgs and key not in multi_rnatip:
+        multi_rnatip.add(key)
+    if multi_lines is not None and '\n' in key[1]:
+        multi_lines.add(key)
+    if py_in_rna is not None and key in py_in_rna[1]:
+        py_in_rna[0].add(key)
+    if not_capitalized is not None and (
+        key[1] not in settings.WARN_MSGID_NOT_CAPITALIZED_ALLOWED
+        and key[1][0].isalpha()
+        and not key[1][0].isupper()
+    ):
+        not_capitalized.add(key)
+    if end_point is not None and (
+        key[1].strip().endswith('.')
+        and (not key[1].strip().endswith('...'))
+        and key[1] not in settings.WARN_MSGID_END_POINT_ALLOWED
+    ):
+        end_point.add(key)
+    if undoc_ops is not None and key[1] == settings.UNDOC_OPS_STR:
+        undoc_ops.add(key)
     if spell_checker is not None and spell_errors is not None:
-        err = spell_checker.check(key[1])
-        if err:
+        if err := spell_checker.check(key[1]):
             spell_errors[key] = err
 
 
@@ -211,7 +207,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
         }
 
         # More builtin classes we don't need to parse.
-        blacklist_rna_class |= {cls for cls in bpy.types.Property.__subclasses__()}
+        blacklist_rna_class |= set(bpy.types.Property.__subclasses__())
 
         return blacklist_rna_class
 
@@ -248,9 +244,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
                 return False
             # Heuristic: If UI label is not capitalized, it is likely a private (undocumented) property,
             # that can be skipped.
-            if prop_name and not prop_name[0].isupper():
-                return False
-            return True
+            return bool(not prop_name or prop_name[0].isupper())
 
         bl_rna = cls.bl_rna
         # Get our parents' properties, to not export them multiple times.
@@ -336,7 +330,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
 
     def walk_class(cls):
         bl_rna = cls.bl_rna
-        msgsrc = "bpy.types." + bl_rna.identifier
+        msgsrc = f"bpy.types.{bl_rna.identifier}"
         msgctxt = bl_rna.translation_context or default_context
 
         if bl_rna.name and (bl_rna.name != bl_rna.identifier or
@@ -375,7 +369,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
     def walk_keymap_hierarchy(hier, msgsrc_prev):
         km_i18n_context = bpy.app.translations.contexts.id_windowmanager
         for lvl in hier:
-            msgsrc = msgsrc_prev + "." + lvl[1]
+            msgsrc = f"{msgsrc_prev}.{lvl[1]}"
             if isinstance(lvl[0], str):  # Can be a function too, now, with tool system...
                 keymap_name = lvl[0]
                 process_msg(msgs, km_i18n_context, keymap_name, msgsrc, reports, None, settings)
@@ -407,7 +401,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
                 if bl_rna is None:
                     raise TypeError("Unknown RNA class")
             while bl_rna:
-                cls_id = bl_rna.identifier + "." + cls_id
+                cls_id = f"{bl_rna.identifier}.{cls_id}"
                 bl_rna = bl_rna.base
             return cls_id
 
@@ -417,7 +411,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
             if issubclass(cls, bpy.types.OperatorProperties) and "_OT_" in cls.__name__:
                 cat_id = cls.__name__.split("_OT_")[0]
                 if cat_id not in operator_categories:
-                    cat_str = cat_id.capitalize() + ":"
+                    cat_str = f"{cat_id.capitalize()}:"
                     operator_categories[cat_id] = cat_str
 
         if verbose:
@@ -455,7 +449,9 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
     for preset_filename in sorted(
             os.listdir(os.path.join(settings.PRESETS_DIR, "keyconfig"))):
         preset_path = os.path.join(settings.PRESETS_DIR, "keyconfig", preset_filename)
-        if not (os.path.isfile(preset_path) and preset_filename.endswith(".py")):
+        if not os.path.isfile(preset_path) or not preset_filename.endswith(
+            ".py"
+        ):
             continue
         preset_name, _ = os.path.splitext(preset_filename)
 
@@ -544,7 +540,7 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
 
         return [_extract_string_merge(estr_ls, nds_ls) for estr_ls, nds_ls in bag]
 
-    i18n_ctxt_ids = {v for v in bpy.app.translations.contexts_C_to_py.values()}
+    i18n_ctxt_ids = set(bpy.app.translations.contexts_C_to_py.values())
 
     def _ctxt_to_ctxt(node):
         # We must try, to some extend, to get contexts from vars instead of only literal strings...
@@ -555,10 +551,9 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
         # So non-literal contexts should be used that way:
         #     i18n_ctxt = bpy.app.translations.contexts
         #     foobar(text="Foo", text_ctxt=i18n_ctxt.id_object)
-        if type(node) == ast.Attribute:
-            if node.attr in i18n_ctxt_ids:
-                # print(node, node.attr, getattr(i18n_contexts, node.attr))
-                return getattr(i18n_contexts, node.attr)
+        if type(node) == ast.Attribute and node.attr in i18n_ctxt_ids:
+            # print(node, node.attr, getattr(i18n_contexts, node.attr))
+            return getattr(i18n_contexts, node.attr)
         return i18n_contexts.default
 
     def _op_to_ctxt(node):
@@ -576,7 +571,7 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
             return op.get_rna_type().translation_context
         except Exception as e:
             default_op_context = i18n_contexts.operator_default
-            print("ERROR: ", str(e))
+            print("ERROR: ", e)
             print("       Assuming default operator context '{}'".format(default_op_context))
             return default_op_context
 
@@ -835,7 +830,7 @@ def dump_src_messages(msgs, reports, settings):
                 d = m.groupdict()
                 # Line.
                 line += data[pos:m.start()].count('\n')
-                msgsrc = rel_path + ":" + str(line)
+                msgsrc = f"{rel_path}:{str(line)}"
                 _msgid = d.get("msg_raw")
                 if _msgid not in {'""', "''"}:
                     # First, try the "multi-contexts" stuff!
@@ -901,14 +896,14 @@ def dump_preset_messages(msgs, reports, settings):
             files.append(rel_path)
     for rel_path in sorted(files):
         msgsrc, msgid = os.path.split(rel_path)
-        msgsrc = "Preset from " + msgsrc
+        msgsrc = f"Preset from {msgsrc}"
         msgid = bpy.path.display_name(msgid, title_case=False)
         process_msg(msgs, settings.DEFAULT_CONTEXT, msgid, msgsrc, reports, None, settings)
 
 
 def dump_template_messages(msgs, reports, settings):
     bfiles = [""]  # General template, no name needed.
-    bfiles += glob.glob(settings.TEMPLATES_DIR + "/**/*.blend", recursive=True)
+    bfiles += glob.glob(f"{settings.TEMPLATES_DIR}/**/*.blend", recursive=True)
 
     workspace_names = {}
 
@@ -924,7 +919,7 @@ def dump_template_messages(msgs, reports, settings):
     msgctxt = i18n_contexts.id_workspace
     for workspace_name in sorted(workspace_names):
         for msgsrc in sorted(workspace_names[workspace_name]):
-            msgsrc = "Workspace from template " + msgsrc
+            msgsrc = f"Workspace from template {msgsrc}"
             process_msg(msgs, msgctxt, workspace_name, msgsrc,
                         reports, None, settings)
 
@@ -946,7 +941,7 @@ def dump_asset_messages(msgs, reports, settings):
         _UUID, catalog_path, _simple_catalog_name = line.split(":")
         catalogs.update(catalog_path.split("/"))
 
-    msgsrc = "Asset catalog from " + settings.ASSET_CATALOG_FILE
+    msgsrc = f"Asset catalog from {settings.ASSET_CATALOG_FILE}"
     for catalog in sorted(catalogs):
         process_msg(msgs, settings.DEFAULT_CONTEXT, catalog, msgsrc,
                     reports, None, settings)
@@ -954,7 +949,7 @@ def dump_asset_messages(msgs, reports, settings):
     # Parse the asset blend files
     asset_files = {}
 
-    bfiles = glob.glob(assets_dir + "/**/*.blend", recursive=True)
+    bfiles = glob.glob(f"{assets_dir}/**/*.blend", recursive=True)
     for bfile in bfiles:
         basename = os.path.basename(bfile)
         bpy.ops.wm.open_mainfile(filepath=bfile)
@@ -970,10 +965,10 @@ def dump_asset_messages(msgs, reports, settings):
     for asset_file in sorted(asset_files):
         for asset in sorted(asset_files[asset_file]):
             name, description = asset
-            msgsrc = "Asset name from file " + asset_file
+            msgsrc = f"Asset name from file {asset_file}"
             process_msg(msgs, settings.DEFAULT_CONTEXT, name, msgsrc,
                         reports, None, settings)
-            msgsrc = "Asset description from file " + asset_file
+            msgsrc = f"Asset description from file {asset_file}"
             process_msg(msgs, settings.DEFAULT_CONTEXT, description, msgsrc,
                         reports, None, settings)
 
@@ -996,10 +991,12 @@ def dump_addon_bl_info(msgs, reports, module, settings):
 
 ##### Main functions! #####
 def dump_messages(do_messages, do_checks, settings):
-    bl_ver = "Blender " + bpy.app.version_string
+    bl_ver = f"Blender {bpy.app.version_string}"
     bl_hash = bpy.app.build_hash
-    bl_date = datetime.datetime.strptime(bpy.app.build_date.decode() + "T" + bpy.app.build_time.decode(),
-                                         "%Y-%m-%dT%H:%M:%S")
+    bl_date = datetime.datetime.strptime(
+        f"{bpy.app.build_date.decode()}T{bpy.app.build_time.decode()}",
+        "%Y-%m-%dT%H:%M:%S",
+    )
     pot = utils.I18nMessages.gen_empty_messages(settings.PARSER_TEMPLATE_ID, bl_ver, bl_hash, bl_date, bl_date.year,
                                                 settings=settings)
     msgs = pot.msgs
@@ -1043,11 +1040,13 @@ def dump_messages(do_messages, do_checks, settings):
             continue
         dump_addon_bl_info(msgs, reports, module, settings)
 
-    # Get strings from addons' categories.
-    system_categories = set()
-    for module in addon_utils.modules():
-        if bpy.path.is_subdir(module.__file__, bpy.utils.system_resource('SCRIPTS')):
-            system_categories.add(module.bl_info['category'])
+    system_categories = {
+        module.bl_info['category']
+        for module in addon_utils.modules()
+        if bpy.path.is_subdir(
+            module.__file__, bpy.utils.system_resource('SCRIPTS')
+        )
+    }
     for uid, label, tip in bpy.types.WindowManager.addon_filter.keywords['items'](
             bpy.context.window_manager,
             bpy.context,
@@ -1195,5 +1194,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print("\n\n *** Running {} *** \n".format(__file__))
+    print(f"\n\n *** Running {__file__} *** \n")
     main()

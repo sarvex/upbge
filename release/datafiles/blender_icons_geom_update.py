@@ -40,11 +40,10 @@ blender_bin = os.environ.get("BLENDER_BIN", "blender")
 if not os.path.exists(blender_bin):
     blender_bin = os.path.join(ROOTDIR, "blender.bin")
 
-if not os.path.exists(blender_bin):
-    if sys.platform == 'darwin':
-        blender_app_path = '/Applications/Blender.app/Contents/MacOS/Blender'
-        if os.path.exists(blender_app_path):
-            blender_bin = blender_app_path
+if not os.path.exists(blender_bin) and sys.platform == 'darwin':
+    blender_app_path = '/Applications/Blender.app/Contents/MacOS/Blender'
+    if os.path.exists(blender_app_path):
+        blender_bin = blender_app_path
 
 icons_blend = (
     os.path.join(ROOTDIR, "..", "lib", "resources", "icon_geom.blend"),
@@ -74,9 +73,7 @@ for blend in icons_blend:
         "--output-dir", output_dir,
     )
 
-    env = {}
-    # Developers may have ASAN enabled, avoid non-zero exit codes.
-    env["ASAN_OPTIONS"] = "exitcode=0:" + os.environ.get("ASAN_OPTIONS", "")
+    env = {"ASAN_OPTIONS": "exitcode=0:" + os.environ.get("ASAN_OPTIONS", "")}
     # These NEED to be set on windows for python to initialize properly.
     if sys.platform[:3] == "win":
         env["PATHEXT"] = os.environ.get("PATHEXT", "")

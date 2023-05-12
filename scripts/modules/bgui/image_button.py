@@ -49,16 +49,8 @@ class ImageButton(Widget):
     else:
       self.default2_image = self.theme['Default2Image']
 
-    if hover_image:
-      self.hover_image = hover_image
-    else:
-      self.hover_image = self.theme['HoverImage']
-
-    if click_image:
-      self.click_image = click_image
-    else:
-      self.click_image = self.theme['ClickImage']
-
+    self.hover_image = hover_image if hover_image else self.theme['HoverImage']
+    self.click_image = click_image if click_image else self.theme['ClickImage']
     if self.default_image[0]:
       coords = self._get_coords(self.default_image)
       self.image = Image(self, self.default_image[0],
